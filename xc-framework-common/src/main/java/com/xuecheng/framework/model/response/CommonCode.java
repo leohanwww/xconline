@@ -24,6 +24,7 @@ public enum CommonCode implements ResultCode{
     int code;
     //提示信息
     String message;
+
     private CommonCode(boolean success,int code, String message){
         this.success = success;
         this.code = code;
