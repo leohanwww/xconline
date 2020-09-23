@@ -9,6 +9,7 @@
         <outputRelativeToContentRoot value="true" />
         <module name="xc-framework-model" />
         <module name="xc-service-api" />
+        <module name="test-freemarker" />
         <module name="xc-framework-common" />
         <module name="xc-framework-utils" />
         <module name="xc-service-manage-cms" />
@@ -20,6 +21,7 @@
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="test-freemarker" options="-parameters" />
       <module name="xc-framework-common" options="-parameters" />
       <module name="xc-framework-model" options="-parameters" />
       <module name="xc-framework-utils" options="-parameters" />
