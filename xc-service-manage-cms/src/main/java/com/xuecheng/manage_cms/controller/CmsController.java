@@ -24,6 +24,12 @@ public class CmsController implements CmsPageControllerApi {
     private CmsPageService service;
 
     @Override
+    @PostMapping("/postPage/{pageId}")
+    public ResponseResult post(@PathVariable("pageId") String pageId) {
+       return service.post(pageId);
+    }
+
+    @Override
     @GetMapping("/list/{page}/{size}")
     public QueryResponseResult findList(@PathVariable("page") int page, @PathVariable("size") int size,
                                         QueryPageRequest queryPageRequest) {

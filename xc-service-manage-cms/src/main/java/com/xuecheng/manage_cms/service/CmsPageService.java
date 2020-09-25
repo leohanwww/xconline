@@ -1,9 +1,11 @@
 package com.xuecheng.manage_cms.service;
 
+import com.alibaba.fastjson.JSON;
 import com.google.common.io.ByteStreams;
 import com.mongodb.client.gridfs.GridFSBucket;
 import com.mongodb.client.gridfs.GridFSDownloadStream;
 import com.mongodb.client.gridfs.model.GridFSFile;
+import com.rabbitmq.tools.json.JSONUtil;
 import com.xuecheng.framework.domain.cms.CmsConfig;
 import com.xuecheng.framework.domain.cms.CmsPage;
 import com.xuecheng.framework.domain.cms.CmsTemplate;
@@ -12,14 +14,18 @@ import com.xuecheng.framework.domain.cms.response.CmsCode;
 import com.xuecheng.framework.domain.cms.response.CmsPageResult;
 import com.xuecheng.framework.exception.ExceptionCast;
 import com.xuecheng.framework.model.response.*;
+import com.xuecheng.manage_cms.config.RabbitmqConfig;
 import com.xuecheng.manage_cms.dao.CmsConfigRepository;
 import com.xuecheng.manage_cms.dao.CmsPageRepository;
 import com.xuecheng.manage_cms.dao.CmsTemplateRepository;
 import freemarker.cache.StringTemplateLoader;
 import freemarker.template.Configuration;
 import freemarker.template.Template;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.bson.types.ObjectId;
+import org.springframework.amqp.core.AmqpTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -31,8 +37,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.ui.freemarker.FreeMarkerTemplateUtils;
 import org.springframework.web.client.RestTemplate;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -51,6 +60,8 @@ public class CmsPageService {
     private GridFSBucket gridFSBucket;
     @Autowired
     private CmsConfigRepository configRepository;
+    @Autowired
+    private AmqpTemplate amqpTemplate;
 
     //根据id查询cms_config
     public CmsConfig getConfigById(String id) {
@@ -283,5 +294,60 @@ public class CmsPageService {
         ResponseEntity<Map> entity = restTemplate.getForEntity(dataUrl, Map.class);
         Map body = entity.getBody();
         return body;
+    }
+
+    //页面发布
+    public ResponseResult post(String pageId){
+        try {
+            //执行页面静态化
+            String pageHtml = this.getPageHtml(pageId);
+            //存储到GridFS
+            CmsPage cmsPage = saveHtml(pageId, pageHtml);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        //发送消息到mq
+        sendPostPage(pageId);
+        return new ResponseResult(CommonCode.SUCCESS);
+    }
+
+    //保存页面到GridFS
+    private CmsPage saveHtml(String pageId,String htmlContent){
+        CmsPage cmsPage = this.queryById(pageId);
+        if (cmsPage==null){
+            ExceptionCast.cast(CmsCode.CMS_PAGE_NOTEXISTS);
+        }
+        //存储前先检查有没有,有的话先删除
+        String htmlFileId = cmsPage.getHtmlFileId();
+        if(StringUtils.isNotEmpty(htmlFileId)){
+            gridFsTemplate.delete(Query.query(Criteria.where("_id").is(htmlFileId)));
+        }
+        InputStream inputStream = null;
+        Object objectId = null;
+        try {
+            //存储文件到fs
+            inputStream = IOUtils.toInputStream(htmlContent, "utf-8");
+            objectId = gridFsTemplate.store(inputStream, cmsPage.getPageName());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        //更新到cmsPage中
+        cmsPage.setHtmlFileId(objectId.toString());
+        pageRepository.save(cmsPage);
+        return cmsPage;
+    }
+
+    //向m发送消息
+    public void sendPostPage(String pageId){
+        //得到页面信息
+        CmsPage cmsPage = this.queryById(pageId);
+        if (cmsPage==null){
+            ExceptionCast.cast(CmsCode.CMS_PAGE_NOTEXISTS);
+        }
+        String siteId = cmsPage.getSiteId();
+        HashMap<String,String> map = new HashMap<>();
+        map.put("pageId",pageId);
+        String msg = JSON.toJSONString(map);
+        amqpTemplate.convertAndSend(RabbitmqConfig.EX_ROUTING_CMS_POSTPAGE,siteId,msg);
     }
 }
