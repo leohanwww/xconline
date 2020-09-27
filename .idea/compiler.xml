@@ -15,6 +15,7 @@
         <module name="xc-service-manage-cms" />
         <module name="xc‐service‐manage‐cms‐client" />
         <module name="test-rabbitmq-producer" />
+        <module name="xc-service-manage-course" />
         <module name="test-rabbitmq-consumer" />
       </profile>
     </annotationProcessing>
@@ -32,6 +33,7 @@
       <module name="xc-framework-utils" options="-parameters" />
       <module name="xc-service-api" options="-parameters" />
       <module name="xc-service-manage-cms" options="-parameters" />
+      <module name="xc-service-manage-course" options="-parameters" />
       <module name="xc‐service‐manage‐cms‐client" options="-parameters" />
     </option>
   </component>
