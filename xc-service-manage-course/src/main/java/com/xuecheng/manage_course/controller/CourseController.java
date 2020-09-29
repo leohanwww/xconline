@@ -1,6 +1,8 @@
 package com.xuecheng.manage_course.controller;
 
 import com.xuecheng.api.course.CourseControllerApi;
+import com.xuecheng.framework.domain.course.CourseBase;
+import com.xuecheng.framework.domain.course.CourseMarket;
 import com.xuecheng.framework.domain.course.Teachplan;
 import com.xuecheng.framework.domain.course.ext.TeachplanNode;
 import com.xuecheng.framework.domain.course.request.CourseListRequest;
@@ -33,6 +35,7 @@ public class CourseController implements CourseControllerApi {
     /**
      * 分页查询我的课程
      * description
+     *
      * @param page
      * @param size
      * @param courseListRequest
@@ -42,5 +45,43 @@ public class CourseController implements CourseControllerApi {
     @GetMapping("/coursebase/list/{page}/{size}")
     public QueryResponseResult findCourseList(@PathVariable("page") int page, @PathVariable("size") int size, CourseListRequest courseListRequest) {
         return courseService.findCourseList(page, size, courseListRequest);
+    }
+
+    /**
+     * 获取课程基本信息
+     * description
+     *
+     * @param courseId
+     * @return com.xuecheng.framework.domain.course.CourseBase
+     */
+    @Override
+    @GetMapping("/coursebase/{courseid}")
+    public CourseBase getCourseBaseById(@PathVariable("courseid") String courseId) {
+        return courseService.getCourseBaseById(courseId);
+    }
+
+    @Override
+    @PostMapping("/update")
+    public ResponseResult updateCourseBase(@RequestBody CourseBase courseBase) {
+        return courseService.updateCourseBase(courseBase);
+    }
+
+    /**
+     * 查询courseMarket
+     * description
+     *
+     * @param courseId
+     * @return com.xuecheng.framework.domain.course.CourseMarket
+     */
+    @Override
+    @GetMapping("/coursemarket/{courseId}")
+    public CourseMarket getCourseMarketById(@PathVariable("courseId") String courseId) {
+        return courseService.getCourseMarketById(courseId);
+    }
+
+    @Override
+    @PostMapping("/coursemarket/{id}")
+    public ResponseResult updateCourseMarket(@PathVariable("id") String id, @RequestBody CourseMarket courseMarket) {
+        return courseService.updateCourseMarket(id, courseMarket);
     }
 }

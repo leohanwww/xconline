@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import com.xuecheng.framework.domain.course.CourseBase;
+import com.xuecheng.framework.domain.course.CourseMarket;
 import com.xuecheng.framework.domain.course.Teachplan;
 import com.xuecheng.framework.domain.course.ext.CourseInfo;
 import com.xuecheng.framework.domain.course.ext.TeachplanNode;
@@ -13,10 +14,7 @@ import com.xuecheng.framework.model.response.CommonCode;
 import com.xuecheng.framework.model.response.QueryResponseResult;
 import com.xuecheng.framework.model.response.QueryResult;
 import com.xuecheng.framework.model.response.ResponseResult;
-import com.xuecheng.manage_course.dao.CourseBaseRepository;
-import com.xuecheng.manage_course.dao.CourseMapper;
-import com.xuecheng.manage_course.dao.TeachplanMapper;
-import com.xuecheng.manage_course.dao.TeachplanRepository;
+import com.xuecheng.manage_course.dao.*;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +36,8 @@ public class CourseService {
     private TeachplanRepository teachplanRepository;
     @Autowired
     private CourseMapper courseMapper;
+    @Autowired
+    private CourseMarketRepository courseMarketRepository;
 
     //查询课程计划列表
     public TeachplanNode findTeachplanList(String courseId) {
@@ -123,7 +123,7 @@ public class CourseService {
         //获取父节点信息
         Optional<Teachplan> optional = teachplanRepository.findById(parentId);
         if (!optional.isPresent()) {
-            ExceptionCast.cast(CommonCode.INVALID_PARAM);
+            ExceptionCast.cast(CommonCode.FAIL);
         }
         Teachplan parentNode = optional.get();
         String parentGrade = parentNode.getGrade();
@@ -155,7 +155,7 @@ public class CourseService {
         //查询
         Page<CourseInfo> courseInfoPage = courseMapper.findCourseList(companyId);
         //判断结果
-        if (CollectionUtils.isEmpty(courseInfoPage)){
+        if (CollectionUtils.isEmpty(courseInfoPage)) {
             ExceptionCast.cast(CommonCode.FAIL);
         }
         //取得结果
@@ -168,6 +168,73 @@ public class CourseService {
         queryResult.setTotal(total);
         QueryResponseResult<CourseInfo> responseResult = new QueryResponseResult<>(CommonCode.SUCCESS, queryResult);
         return responseResult;
+    }
+
+    public CourseBase getCourseBaseById(String courseId) {
+        //判断参数
+        if (StringUtils.isNotBlank(courseId)) {
+            //查询
+            Optional<CourseBase> optional = courseBaseRepository.findById(courseId);
+            if (!optional.isPresent()) {
+                ExceptionCast.cast(CommonCode.FAIL);
+            }
+            return optional.get();
+        }
+        return null;
+    }
+
+    @Transactional
+    public ResponseResult updateCourseBase(CourseBase courseBase) {
+        //参数判断
+        if (courseBase == null) {
+            //不存在
+            ExceptionCast.cast(CommonCode.INVALID_PARAM);
+        }
+        //查询是不是存在coursebase
+        CourseBase courseBaseById = this.getCourseBaseById(courseBase.getId());
+        if (courseBaseById == null) {
+            //不存在,则不能更新,报错
+            ExceptionCast.cast(CommonCode.FAIL);
+        }
+        //复制实体类属性
+        BeanUtils.copyProperties(courseBase, courseBaseById);
+        courseBaseRepository.save(courseBaseById);
+        //构建返回值
+        return new ResponseResult(CommonCode.SUCCESS);
+
+    }
+
+    public CourseMarket getCourseMarketById(String courseId) {
+        //判断参数
+        if (StringUtils.isBlank(courseId)) {
+            ExceptionCast.cast(CommonCode.INVALID_PARAM);
+        }
+        Optional<CourseMarket> optional = courseMarketRepository.findById(courseId);
+        //判断结果
+        if (!optional.isPresent()) {
+            ExceptionCast.cast(CommonCode.FAIL);
+        }
+        return optional.get();
+    }
+
+    @Transactional
+    public ResponseResult updateCourseMarket(String id, CourseMarket courseMarket) {
+        //判断参数
+        if (StringUtils.isBlank(id) || courseMarket == null) {
+            ExceptionCast.cast(CommonCode.INVALID_PARAM);
+        }
+        //根据id查询是否存在
+        Optional<CourseMarket> optional = courseMarketRepository.findById(id);
+        if (!optional.isPresent()) {
+            //不存在则新增
+            courseMarketRepository.save(courseMarket);
+            return new ResponseResult(CommonCode.SUCCESS);
+        }
+        //存在的话
+        CourseMarket market = optional.get();
+        BeanUtils.copyProperties(courseMarket, market);
+        courseMarketRepository.save(market);
+        return new ResponseResult(CommonCode.SUCCESS);
     }
 }
 
