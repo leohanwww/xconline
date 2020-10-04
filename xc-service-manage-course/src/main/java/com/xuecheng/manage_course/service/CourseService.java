@@ -5,6 +5,7 @@ import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import com.xuecheng.framework.domain.course.CourseBase;
 import com.xuecheng.framework.domain.course.CourseMarket;
+import com.xuecheng.framework.domain.course.CoursePic;
 import com.xuecheng.framework.domain.course.Teachplan;
 import com.xuecheng.framework.domain.course.ext.CourseInfo;
 import com.xuecheng.framework.domain.course.ext.TeachplanNode;
@@ -38,6 +39,8 @@ public class CourseService {
     private CourseMapper courseMapper;
     @Autowired
     private CourseMarketRepository courseMarketRepository;
+    @Autowired
+    private CoursePicRepository coursePicRepository;
 
     //查询课程计划列表
     public TeachplanNode findTeachplanList(String courseId) {
@@ -235,6 +238,55 @@ public class CourseService {
         BeanUtils.copyProperties(courseMarket, market);
         courseMarketRepository.save(market);
         return new ResponseResult(CommonCode.SUCCESS);
+    }
+
+    @Transactional
+    public ResponseResult addCoursePic(String courseId, String pic) {
+        if (StringUtils.isBlank(courseId) || StringUtils.isBlank(pic)) {
+            ExceptionCast.cast(CommonCode.FAIL);
+        }
+        //先查询课程图片
+        CoursePic coursePic = null;
+        Optional<CoursePic> optional = coursePicRepository.findById(courseId);
+        if (optional.isPresent()) {
+            coursePic = optional.get();
+        }
+        if (coursePic == null) {
+            coursePic = new CoursePic();
+        }
+        coursePic.setPic(pic);
+        coursePic.setCourseid(courseId);
+        coursePicRepository.save(coursePic);
+        return new ResponseResult(CommonCode.SUCCESS);
+    }
+
+    public CoursePic findCoursePic(String courseId) {
+        //参数判断
+        if (StringUtils.isBlank(courseId)) {
+            ExceptionCast.cast(CommonCode.INVALID_PARAM);
+        }
+        //根据id查询
+        Optional<CoursePic> optional = coursePicRepository.findById(courseId);
+        if (optional.isPresent()) {
+            return optional.get();
+        }
+        return null;
+    }
+
+    @Transactional
+    public ResponseResult deleteCoursePic(String courseId) {
+        //查询
+        if (StringUtils.isBlank(courseId)) {
+            ExceptionCast.cast(CommonCode.INVALID_PARAM);
+        }
+        Optional<CoursePic> optional = coursePicRepository.findById(courseId);
+        if (optional.isPresent()) {
+            //查到了删除
+            coursePicRepository.deleteById(courseId);
+            return new ResponseResult(CommonCode.SUCCESS);
+        }
+        //查不到返回删除失败
+        return new ResponseResult(CommonCode.FAIL);
     }
 }
 

@@ -14,6 +14,7 @@ import java.util.Map;
 @ToString
 @Document(collection = "filesystem")
 public class FileSystem {
+    //不用在mongodb建表插入时就能根据这个模型自动建立
 
     @Id
     private String fileId;
