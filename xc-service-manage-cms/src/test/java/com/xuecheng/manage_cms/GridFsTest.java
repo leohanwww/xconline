@@ -32,10 +32,10 @@ public class GridFsTest {
 
     @Test
     public void testStore() throws IOException {
-        FileInputStream inputStream = FileUtils.openInputStream(new File("d:/index_banner.ftl"));
+        FileInputStream inputStream = FileUtils.openInputStream(new File("c:/course.ftl"));
         //mongodb自带gridfs,安装mongodb后可以直接上传
-        ObjectId objectId = gridFsTemplate.store(inputStream, "index_banner.ftl");
-        System.out.println(objectId);//5f6aa8e4712b960c58996fda
+        ObjectId objectId = gridFsTemplate.store(inputStream, "course.ftl");
+        System.out.println(objectId);//5f7e990f712b9647602454ed
     }
 
     @Test
