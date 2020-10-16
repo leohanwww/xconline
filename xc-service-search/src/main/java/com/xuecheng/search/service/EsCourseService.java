@@ -10,6 +10,7 @@ import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.common.text.Text;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.MultiMatchQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
@@ -17,6 +18,7 @@ import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.fetch.subphase.highlight.HighlightBuilder;
+import org.elasticsearch.search.fetch.subphase.highlight.HighlightField;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -120,8 +122,22 @@ public class EsCourseService {
                 CoursePub coursePub = new CoursePub();
                 //获取源文档
                 Map<String, Object> sourceAsMap = hit.getSourceAsMap();
+                //取出id
+                String id = (String)  sourceAsMap.get("id");
+                coursePub.setId(id);
                 //name
                 String name = (String) sourceAsMap.get("name");
+                //取出高亮字段name
+                Map<String, HighlightField> highlightFields = hit.getHighlightFields();
+                if (highlightFields.get("name") != null) {
+                    HighlightField highlightField = highlightFields.get("name");
+                    Text[] fragments = highlightField.fragments();
+                    StringBuffer stringBuffer = new StringBuffer();
+                    for (Text text : fragments) {
+                        stringBuffer.append(text);
+                    }
+                    name = stringBuffer.toString();
+                }
                 coursePub.setName(name);
                 //图片
                 String pic = (String) sourceAsMap.get("pic");
