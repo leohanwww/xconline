@@ -1,15 +1,19 @@
 package com.xuecheng.manage_media.service;
 
+import com.alibaba.fastjson.JSON;
 import com.xuecheng.framework.domain.media.MediaFile;
 import com.xuecheng.framework.domain.media.response.CheckChunkResult;
 import com.xuecheng.framework.domain.media.response.MediaCode;
 import com.xuecheng.framework.exception.ExceptionCast;
 import com.xuecheng.framework.model.response.CommonCode;
 import com.xuecheng.framework.model.response.ResponseResult;
+import com.xuecheng.manage_media.config.RabbitMQConfig;
 import com.xuecheng.manage_media.dao.MediaFileRepository;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.amqp.AmqpException;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -23,9 +27,13 @@ public class MediaUploadService {
 
     @Autowired
     private MediaFileRepository mediaFileRepository;
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
 
     @Value("${xc-service-manage-media.upload-location}")
     String uploadLocation;
+    @Value("${xc-service-manage-media.mq.routingkey-media-video}")
+    private String routingKey;
 
     //文件上传前的检验,检查文件是否存在
     public ResponseResult register(String fileMd5,
@@ -65,6 +73,7 @@ public class MediaUploadService {
         if (chunkFile.exists()) {
             return new CheckChunkResult(CommonCode.SUCCESS, true);
         } else {
+            //块文件不存在
             return new CheckChunkResult(CommonCode.SUCCESS, false);
         }
     }
@@ -82,17 +91,30 @@ public class MediaUploadService {
      */
     private String getFileFolderPath(String fileMd5) {
         //md5的第一个字符+md5的第二个字符 = F:/develop/video/0/5/md5/ 目录的地址
-        return uploadLocation + fileMd5.substring(0, 1) + "/" + fileMd5.substring(1, 2) + fileMd5 + '/';
+        return uploadLocation + fileMd5.substring(0, 1) + "/" + fileMd5.substring(1, 2) +'/'+ fileMd5 + '/';
     }
 
     private String getFilePath(String fileMd5, String fileExt) {
         //md5的第一个字符+md5的第二个字符 = F:/develop/video/0/5/md5/md5.ext 目录的地址
-        return uploadLocation + fileMd5.substring(0, 1) + "/" + fileMd5.substring(1, 2) + fileMd5 + '/' + fileMd5
+        return uploadLocation + fileMd5.substring(0, 1) + "/" + fileMd5.substring(1, 2) + '/' + fileMd5 + '/' + fileMd5
                 + '.' + fileExt;
     }
 
+    //创建文件目录
+    private boolean createFileFold(String fileMd5) {
+        //创建上传文件目录
+        String fileFolderPath = getFileFolderPath(fileMd5);
+        File fileFolder = new File(fileFolderPath);
+        if (!fileFolder.exists()) {
+            //创建文件夹
+            boolean mkdirs = fileFolder.mkdirs();
+            return mkdirs;
+        }
+        return true;
+    }
+
     //得到文件目录相对路径，路径中去掉根目录
-    private String getFileFolderRelativePath(String fileMd5,String fileExt){
+    private String getFileFolderRelativePath(String fileMd5, String fileExt) {
         String filePath = fileMd5.substring(0, 1) + "/" + fileMd5.substring(1, 2) + "/" +
                 fileMd5 + "/";
         return filePath;
@@ -101,7 +123,7 @@ public class MediaUploadService {
     //块文件所属目录
     private String getChunkFileFolderPath(String fileMd5) {
         //md5的第一个字符+md5的第二个字符 = F:/develop/video/0/5/md5/md5.ext 目录的地址
-        return getFileFolderPath(fileMd5) + "/" + "chunk" + "/";
+        return getFileFolderPath(fileMd5) +"chunk" + "/";
     }
 
     //上传分块
@@ -167,15 +189,15 @@ public class MediaUploadService {
         }
         //校验md5和前端是否一样
         boolean isMd5Match = checkFileMd5(afterMergeFile, fileMd5);
-        if (!isMd5Match){
+        if (!isMd5Match) {
             ExceptionCast.cast(MediaCode.MERGE_FILE_CHECKFAIL);
         }
         //将文件写入mongodb
         MediaFile mediaFile = new MediaFile();
         mediaFile.setFileId(fileMd5);
         mediaFile.setFileOriginalName(fileName);
-        mediaFile.setFileName(fileMd5+'.'+fileExt);
-        mediaFile.setFilePath(getFileFolderRelativePath(fileMd5,fileExt));
+        mediaFile.setFileName(fileMd5 + '.' + fileExt);
+        mediaFile.setFilePath(getFileFolderRelativePath(fileMd5, fileExt));
         mediaFile.setFileSize(fileSize);
         mediaFile.setUploadTime(new Date());
         mediaFile.setMimeType(mimetype);
@@ -183,6 +205,31 @@ public class MediaUploadService {
         //状态为上传成功
         mediaFile.setFileStatus("301002");
         mediaFileRepository.save(mediaFile);
+        //发送mq消息
+        sendProcessVideoMsg(mediaFile.getFileId());
+
+        return new ResponseResult(CommonCode.SUCCESS);
+    }
+
+    //发送视频处理消息
+    public ResponseResult sendProcessVideoMsg(String mediaId) {
+        Optional<MediaFile> optional = mediaFileRepository.findById(mediaId);
+        if (!optional.isPresent()) {
+            return new ResponseResult(CommonCode.FAIL);
+        }
+        MediaFile mediaFile = optional.get();
+
+        HashMap<String, String> map = new HashMap<>();
+        map.put("mediaId", mediaId);
+        //构建要发送的消息
+        String msg = JSON.toJSONString(map);
+        //发消息
+        try {
+            rabbitTemplate.convertAndSend(RabbitMQConfig.EX_MEDIA_PROCESSTASK, routingKey, msg);
+        } catch (AmqpException e) {
+            e.printStackTrace();
+            return new ResponseResult(CommonCode.FAIL);
+        }
 
         return new ResponseResult(CommonCode.SUCCESS);
     }
