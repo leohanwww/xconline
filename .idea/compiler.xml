@@ -14,9 +14,11 @@
         <module name="test-rabbitmq-producer" />
         <module name="xc-service-manage-course" />
         <module name="test-rabbitmq-consumer" />
+        <module name="xc-service-learning" />
         <module name="test-freemarker" />
         <module name="xc-service-search" />
         <module name="xc-govern-center" />
+        <module name="xc-service-ucenter-auth" />
         <module name="xc-service-base-filesystem" />
         <module name="xc-service-api" />
         <module name="xc-service-manage-media" />
@@ -39,11 +41,13 @@
       <module name="xc-govern-center" options="-parameters" />
       <module name="xc-service-api" options="-parameters" />
       <module name="xc-service-base-filesystem" options="-parameters" />
+      <module name="xc-service-learning" options="-parameters" />
       <module name="xc-service-manage-cms" options="-parameters" />
       <module name="xc-service-manage-course" options="-parameters" />
       <module name="xc-service-manage-media" options="-parameters" />
       <module name="xc-service-manage-media-processor" options="-parameters" />
       <module name="xc-service-search" options="-parameters" />
+      <module name="xc-service-ucenter-auth" options="-parameters" />
       <module name="xc‐service‐manage‐cms‐client" options="-parameters" />
     </option>
   </component>

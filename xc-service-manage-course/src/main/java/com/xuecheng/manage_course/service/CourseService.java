@@ -29,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -51,6 +52,10 @@ public class CourseService {
     private CmsPageClient cmsPageClient;
     @Autowired
     private CoursePubRepository coursePubRepository;
+    @Autowired
+    TeachplanMediaRepository teachplanMediaRepository;
+    @Autowired
+    TeachplanMediaPubRepository teachplanMediaPubRepository;
 
     @Value("${course‐publish.dataUrlPre}")
     private String publish_dataUrlPre;
@@ -389,22 +394,41 @@ public class CourseService {
         //创建coursePub对象
         CoursePub coursePub = createCoursePub(id);
         //将coursePub保存到数据库
-        saveCoursePub(id,coursePub);
+        saveCoursePub(id, coursePub);
         String pageUrl = cmsPostPageResult.getPageUrl();
+        //向teachplanmediapub中保存媒资信息
+        saveTeachplanMediaPub(id);
         return new CoursePublishResult(CommonCode.SUCCESS, pageUrl);
+    }
+
+    //向teachplanmediapub中保存媒资信息
+    public void saveTeachplanMediaPub(String courseId){
+        //先删除teachplanmediapub中的信息
+        teachplanMediaPubRepository.deleteByCourseId(courseId);
+        //查询teachplanmedia中的媒体信息
+        List<TeachplanMedia> mediaList = teachplanMediaRepository.findByCourseId(courseId);
+        //将mediaList插入到eachplanmedia中
+        List<TeachplanMediaPub> teachplanMediaPubs = new ArrayList<>();
+        for (TeachplanMedia teachplanMedia : mediaList) {
+            TeachplanMediaPub teachplanMediaPub = new TeachplanMediaPub();
+            BeanUtils.copyProperties(teachplanMedia,teachplanMediaPub);
+            teachplanMediaPub.setTimestamp(new Date());
+            teachplanMediaPubs.add(teachplanMediaPub);
+        }
+        teachplanMediaPubRepository.saveAll(teachplanMediaPubs);
     }
 
     private CoursePub saveCoursePub(String id, CoursePub coursePub) {
         //根据id查询
         CoursePub coursePubNew = new CoursePub();
         Optional<CoursePub> optional = coursePubRepository.findById(id);
-        if (optional.isPresent()){
+        if (optional.isPresent()) {
             coursePubNew = optional.get();
-        }else {
+        } else {
             coursePubNew = new CoursePub();
         }
         //将coursePub保存到coursePubNew
-        BeanUtils.copyProperties(coursePub,coursePubNew);
+        BeanUtils.copyProperties(coursePub, coursePubNew);
         coursePubNew.setId(id);
         coursePubNew.setTimestamp(new Date());
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("YYYY‐MM‐dd HH:mm:ss");
@@ -451,6 +475,41 @@ public class CourseService {
         courseBaseById.setStatus("202002");
         courseBaseRepository.save(courseBaseById);
         return courseBaseById;
+    }
+
+    //保存视频到课程计划
+    public ResponseResult savemedia(TeachplanMedia teachplanMedia) {
+        //参数判断
+        if (teachplanMedia == null || StringUtils.isEmpty(teachplanMedia.getTeachplanId())) {
+            ExceptionCast.cast(CommonCode.INVALID_PARAM);
+        }
+        String teachPlanId = teachplanMedia.getTeachplanId();
+        //检验课程计划是否是3级
+        Optional<Teachplan> optional = teachplanRepository.findById(teachPlanId);
+        if (!optional.isPresent()) { //数据库中没有找到
+            ExceptionCast.cast(CommonCode.INVALID_PARAM);
+        }
+        Teachplan teachplan = optional.get();
+        String grade = teachplan.getGrade();
+        if (StringUtils.isEmpty(grade) || !grade.equals("3")) {
+            ExceptionCast.cast(CourseCode.COURSE_MEDIA_TEACHPLAN_GRADEERROR);
+        }
+        //查询teachPlanMedia
+        TeachplanMedia one = null;
+        Optional<TeachplanMedia> teachplanMediaOptional = teachplanMediaRepository.findById(teachPlanId);
+        if (teachplanMediaOptional.isPresent()){
+            one = teachplanMediaOptional.get();
+        }else {
+            one = new TeachplanMedia();
+        }
+        //更新one到数据库
+        one.setCourseId(teachplan.getCourseid());
+        one.setMediaFileOriginalName(teachplanMedia.getMediaFileOriginalName());
+        one.setMediaId(teachplanMedia.getMediaId());
+        one.setMediaUrl(teachplanMedia.getMediaUrl());
+        one.setTeachplanId(teachPlanId);
+        teachplanMediaRepository.save(one);
+        return new ResponseResult(CommonCode.SUCCESS);
     }
 }
 
