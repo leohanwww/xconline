@@ -8,6 +8,7 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="xc-framework-model" />
+        <module name="xc-service-ucenter" />
         <module name="xc-framework-common" />
         <module name="xc-framework-utils" />
         <module name="xc‐service‐manage‐cms‐client" />
@@ -47,6 +48,7 @@
       <module name="xc-service-manage-media" options="-parameters" />
       <module name="xc-service-manage-media-processor" options="-parameters" />
       <module name="xc-service-search" options="-parameters" />
+      <module name="xc-service-ucenter" options="-parameters" />
       <module name="xc-service-ucenter-auth" options="-parameters" />
       <module name="xc‐service‐manage‐cms‐client" options="-parameters" />
     </option>
