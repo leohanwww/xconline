@@ -8,6 +8,7 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="xc-framework-model" />
+        <module name="xc-govern-gateway" />
         <module name="xc-service-ucenter" />
         <module name="xc-framework-common" />
         <module name="xc-framework-utils" />
@@ -40,6 +41,7 @@
       <module name="xc-framework-model" options="-parameters" />
       <module name="xc-framework-utils" options="-parameters" />
       <module name="xc-govern-center" options="-parameters" />
+      <module name="xc-govern-gateway" options="-parameters" />
       <module name="xc-service-api" options="-parameters" />
       <module name="xc-service-base-filesystem" options="-parameters" />
       <module name="xc-service-learning" options="-parameters" />
