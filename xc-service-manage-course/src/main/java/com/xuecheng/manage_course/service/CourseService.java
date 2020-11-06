@@ -26,7 +26,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.CollectionUtils;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -171,34 +170,30 @@ public class CourseService {
     }
 
     //分页查询我的课程
-    public QueryResponseResult findCourseList(int page, int size, CourseListRequest courseListRequest) {
-        //验证参数
-        if (page <= 1) {
-            page = 1;
+    public QueryResponseResult<CourseInfo> findCourseList(String companyId, int page, int
+            size, CourseListRequest courseListRequest) {
+        if (courseListRequest == null) {
+            courseListRequest = new CourseListRequest();
         }
-        if (size <= 10) {
-            size = 10;
+        //企业id
+        courseListRequest.setCompanyId(companyId);
+        //将companyId传给dao
+        courseListRequest.setCompanyId(companyId);
+        if (page <= 0) {
+            page = 0;
         }
-        String companyId = courseListRequest.getCompanyId();
-
-        //设置分页条件
+        if (size <= 0) {
+            size = 20;
+        }
         PageHelper.startPage(page, size);
-        //查询
-        Page<CourseInfo> courseInfoPage = courseMapper.findCourseList(companyId);
-        //判断结果
-        if (CollectionUtils.isEmpty(courseInfoPage)) {
-            ExceptionCast.cast(CommonCode.FAIL);
-        }
-        //取得结果
-        List<CourseInfo> list = courseInfoPage.getResult();
-        long total = courseInfoPage.getTotal();
+        Page<CourseInfo> courseListPage = courseMapper.findCourseListPage(courseListRequest);
+        List<CourseInfo> list = courseListPage.getResult();
+        long total = courseListPage.getTotal();
 
-        //构建返回对象
         QueryResult<CourseInfo> queryResult = new QueryResult<>();
-        queryResult.setList(list);
         queryResult.setTotal(total);
-        QueryResponseResult<CourseInfo> responseResult = new QueryResponseResult<>(CommonCode.SUCCESS, queryResult);
-        return responseResult;
+        queryResult.setList(list);
+        return new QueryResponseResult<>(CommonCode.SUCCESS,queryResult);
     }
 
     public CourseBase getCourseBaseById(String courseId) {
@@ -402,7 +397,7 @@ public class CourseService {
     }
 
     //向teachplanmediapub中保存媒资信息
-    public void saveTeachplanMediaPub(String courseId){
+    public void saveTeachplanMediaPub(String courseId) {
         //先删除teachplanmediapub中的信息
         teachplanMediaPubRepository.deleteByCourseId(courseId);
         //查询teachplanmedia中的媒体信息
@@ -411,7 +406,7 @@ public class CourseService {
         List<TeachplanMediaPub> teachplanMediaPubs = new ArrayList<>();
         for (TeachplanMedia teachplanMedia : mediaList) {
             TeachplanMediaPub teachplanMediaPub = new TeachplanMediaPub();
-            BeanUtils.copyProperties(teachplanMedia,teachplanMediaPub);
+            BeanUtils.copyProperties(teachplanMedia, teachplanMediaPub);
             teachplanMediaPub.setTimestamp(new Date());
             teachplanMediaPubs.add(teachplanMediaPub);
         }
@@ -497,9 +492,9 @@ public class CourseService {
         //查询teachPlanMedia
         TeachplanMedia one = null;
         Optional<TeachplanMedia> teachplanMediaOptional = teachplanMediaRepository.findById(teachPlanId);
-        if (teachplanMediaOptional.isPresent()){
+        if (teachplanMediaOptional.isPresent()) {
             one = teachplanMediaOptional.get();
-        }else {
+        } else {
             one = new TeachplanMedia();
         }
         //更新one到数据库

@@ -12,7 +12,9 @@ import lombok.ToString;
 
 @ToString
 public enum LearningCode implements ResultCode {
-    LEARNING_GETMEDIA_ERROR(false,23001,"找不到媒体资源信息");
+    LEARNING_GETMEDIA_ERROR(false,23001,"找不到媒体资源信息"),
+    CHOOSECOURSE_USERISNULL(false,23002,"找不到选课用户信息"),
+    CHOOSECOURSE_TASKISNULL(false,23003,"找不到选课任务信息");
 //    private static ImmutableMap<Integer, CommonCode> codes ;
     //操作是否成功
     boolean success;
