@@ -89,6 +89,7 @@ public class LearningService {
             BeanUtils.copyProperties(xcTask,xcTaskHis);
             xcTaskHisRepository.save(xcTaskHis);
         }
+
         return new ResponseResult(CommonCode.SUCCESS);
     }
 }
